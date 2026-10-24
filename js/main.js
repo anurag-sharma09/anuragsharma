@@ -111,21 +111,35 @@ document.addEventListener('DOMContentLoaded', () => {
       submitBtn.disabled = true;
       submitBtn.style.opacity = '0.8';
 
-      // Simulate async send (replace with real EmailJS / Formspree)
-      setTimeout(() => {
+      // Send via Web3Forms API
+      const formData = new FormData(form);
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(result => {
         btnLoader?.classList.add('hidden');
-        btnText.textContent = '✓ Sent!';
-        submitBtn.style.opacity = '1';
-        submitBtn.style.background = 'linear-gradient(135deg, #00ffaa, #00d4ff)';
+        if (result.success) {
+          btnText.textContent = '✓ Sent!';
+          submitBtn.style.opacity = '1';
+          submitBtn.style.background = 'linear-gradient(135deg, #00ffaa, #00d4ff)';
 
-        if (successMsg) {
-          successMsg.classList.remove('hidden');
-          successMsg.style.animation = 'page-in 0.5s ease both';
+          if (successMsg) {
+            successMsg.textContent = '✅ Message sent successfully! Thank you for contacting me.';
+            successMsg.classList.remove('hidden');
+            successMsg.style.animation = 'page-in 0.5s ease both';
+          }
+          form.reset();
+        } else {
+          btnText.textContent = 'Failed';
+          if (successMsg) {
+            successMsg.textContent = '⚠️ Unable to send your message. Please try again.';
+            successMsg.classList.remove('hidden');
+          }
         }
 
-        form.reset();
-
-        // Reset button after delay
         setTimeout(() => {
           btnText.textContent = 'Send Message';
           btnIcon?.classList.remove('hidden');
@@ -133,7 +147,22 @@ document.addEventListener('DOMContentLoaded', () => {
           submitBtn.style.background = '';
           if (successMsg) successMsg.classList.add('hidden');
         }, 5000);
-      }, 2000);
+      })
+      .catch(err => {
+        btnLoader?.classList.add('hidden');
+        btnText.textContent = 'Failed';
+        if (successMsg) {
+          successMsg.textContent = '⚠️ Unable to send your message. Please try again.';
+          successMsg.classList.remove('hidden');
+        }
+        setTimeout(() => {
+          btnText.textContent = 'Send Message';
+          btnIcon?.classList.remove('hidden');
+          submitBtn.disabled = false;
+          submitBtn.style.background = '';
+          if (successMsg) successMsg.classList.add('hidden');
+        }, 5000);
+      });
     });
   }
 
