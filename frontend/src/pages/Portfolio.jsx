@@ -1029,7 +1029,7 @@ export default function Portfolio() {
     };
   }, [loading, projects, skills, experience]);
 
-  // Contact Form Submission Handler
+  // Contact Form Submission Handler (Web3Forms API)
   const handleContactSubmit = async (e) => {
     e.preventDefault();
     if (!contactName || !contactEmail || !contactMessage) {
@@ -1039,39 +1039,46 @@ export default function Portfolio() {
 
     setFormStatus('sending');
     try {
-      const res = await fetch('/api/contact', {
+      const form = e.currentTarget;
+      const formData = new FormData(form);
+
+      const response = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: contactName,
-          email: contactEmail,
-          subject: contactSubject,
-          message: contactMessage
-        })
+        headers: { Accept: 'application/json' },
+        body: formData
       });
 
-      const data = await res.json();
-      if (data.success) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         setFormStatus('success');
-        setFormFeedback('✅ Message sent! I\'ll get back to you soon.');
+        setFormFeedback('Message sent successfully! Thank you for contacting me.');
         setContactName('');
         setContactEmail('');
         setContactSubject('');
         setContactMessage('');
-        
+        form.reset();
+
         setTimeout(() => {
           setFormStatus('idle');
+          setFormFeedback('');
         }, 5000);
       } else {
         setFormStatus('error');
-        setFormFeedback(data.message || 'Failed to send message.');
-        setTimeout(() => setFormStatus('idle'), 5000);
+        setFormFeedback(result.message || 'Unable to send your message. Please try again.');
+        setTimeout(() => {
+          setFormStatus('idle');
+          setFormFeedback('');
+        }, 5000);
       }
     } catch (err) {
       console.error('Contact submit error:', err);
       setFormStatus('error');
-      setFormFeedback('⚠️ Connection failed. Message could not be sent.');
-      setTimeout(() => setFormStatus('idle'), 5000);
+      setFormFeedback('Unable to send your message. Please try again.');
+      setTimeout(() => {
+        setFormStatus('idle');
+        setFormFeedback('');
+      }, 5000);
     }
   };
 
@@ -1792,14 +1799,33 @@ export default function Portfolio() {
 
             {/* Contact Form */}
             <div className="contact-form-wrap-premium">
-              <form id="contact-form" className="contact-form" onSubmit={handleContactSubmit} novalidate>
+              <form id="contact-form" className="contact-form" onSubmit={handleContactSubmit} noValidate>
+                {/* Web3Forms Hidden Configuration Fields */}
+                <input
+                  type="hidden"
+                  name="access_key"
+                  value={import.meta.env.VITE_WEB3FORMS_ACCESS_KEY || "YOUR_ACCESS_KEY_HERE"}
+                />
+                <input
+                  type="hidden"
+                  name="subject"
+                  value="New Portfolio Contact Message"
+                />
+                <input
+                  type="checkbox"
+                  name="botcheck"
+                  style={{ display: 'none' }}
+                  tabIndex={-1}
+                />
+
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="form-name">Full Name</label>
                     <input 
                       type="text" 
                       id="form-name" 
-                      placeholder="enter your name" 
+                      name="name"
+                      placeholder="Your Name" 
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
                       required 
@@ -1810,7 +1836,8 @@ export default function Portfolio() {
                     <input 
                       type="email" 
                       id="form-email" 
-                      placeholder="enter your email" 
+                      name="email"
+                      placeholder="Your Email" 
                       value={contactEmail}
                       onChange={(e) => setContactEmail(e.target.value)}
                       required 
@@ -1822,17 +1849,20 @@ export default function Portfolio() {
                   <input 
                     type="text" 
                     id="form-subject" 
-                    placeholder="Project Inquiry" 
+                    name="subject_line"
+                    placeholder="Subject" 
                     value={contactSubject}
                     onChange={(e) => setContactSubject(e.target.value)}
+                    required
                   />
                 </div>
                 <div className="form-group">
                   <label htmlFor="form-message">Message</label>
                   <textarea 
                     id="form-message" 
+                    name="message"
                     rows="5" 
-                    placeholder="Tell me about your project..." 
+                    placeholder="Your Message" 
                     value={contactMessage}
                     onChange={(e) => setContactMessage(e.target.value)}
                     required
@@ -1844,18 +1874,23 @@ export default function Portfolio() {
                   </span>
                   {formStatus !== 'sending' && (
                     <span className="btn-icon">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                     </span>
                   )}
                   {formStatus === 'sending' && (
                     <span className="btn-loader">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" className="spin"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-dasharray="40" stroke-dashoffset="40"><animate attributeName="stroke-dashoffset" values="40;0;40" dur="1.5s" repeatCount="indefinite"/></path></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="spin"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeDasharray="40" strokeDashoffset="40"><animate attributeName="stroke-dashoffset" values="40;0;40" dur="1.5s" repeatCount="indefinite"/></path></svg>
                     </span>
                   )}
                 </button>
-                {formStatus !== 'idle' && (
-                  <p className={`form-success ${formStatus === 'error' ? 'error-text' : ''}`} style={{ display: 'block', marginTop: '1.2rem', color: formStatus === 'error' ? '#ff6b9d' : '#00ffaa' }}>
-                    {formFeedback}
+                {formStatus === 'success' && (
+                  <p className="form-success" style={{ display: 'block', marginTop: '1.2rem', color: '#00ffaa' }}>
+                    Message sent successfully! Thank you for contacting me.
+                  </p>
+                )}
+                {formStatus === 'error' && (
+                  <p className="form-success error-text" style={{ display: 'block', marginTop: '1.2rem', color: '#ff6b9d' }}>
+                    {formFeedback || 'Unable to send your message. Please try again.'}
                   </p>
                 )}
               </form>
